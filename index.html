@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#100e0b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Лабиринт забытой библиотеки</title>
+<style>
+:root{
+  --bg:#100e0b;--ink:#f0e4cd;--gold:#ebc98b;--muted:#c2ad8f;
+  --line:rgba(225,187,121,.24);--serif:Georgia,'Times New Roman',serif;
+  --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  overscroll-behavior:none;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:disabled{opacity:.4}
+button:active:not(:disabled){transform:scale(.97)}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{font-family:var(--serif);font-weight:500}
+
+#app{position:relative;width:100%;height:100%;overflow:hidden;display:flex;flex-direction:column;
+  padding-top:var(--safe-t);padding-bottom:var(--safe-b);
+  background:radial-gradient(ellipse at 50% 20%,#32241a 0%,#1d1814 55%,#0d0b09 100%)}
+.bg-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9;pointer-events:none}
+.vignette{position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:radial-gradient(ellipse at 50% 40%,transparent 35%,rgba(5,4,4,.8) 100%)}
+.grain{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.10;
+  background-image:url('data:image/svg+xml,%3Csvg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.4" numOctaves="3"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)" opacity=".5"/%3E%3C/svg%3E')}
+
+.hud{position:relative;z-index:6;display:flex;gap:8px;padding:10px 12px 6px;justify-content:space-between;align-items:center}
+.chip{flex:1;border:1px solid var(--line);border-radius:14px;background:rgba(15,11,10,.8);padding:7px 10px;text-align:center;backdrop-filter:blur(6px)}
+.chip .lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#bfa98b}
+.chip .val{font-family:var(--serif);font-size:19px;color:#f1ddb6;line-height:1.15;margin-top:1px}
+.icon-btn{flex:0 0 auto;width:44px;height:44px;display:grid;place-items:center;
+  border:1px solid var(--line);border-radius:13px;background:rgba(24,18,14,.85);font-size:19px;color:var(--gold)}
+
+.screen{position:relative;z-index:5;flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+.welcome{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:18px 20px;overflow-y:auto;text-align:center;gap:14px}
+.welcome .eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#d9b575}
+.welcome h1{font-size:clamp(30px,9vw,44px);line-height:1.05;color:#f2dec0}
+.welcome .lead{font-size:15px;line-height:1.55;color:#d3baa0;max-width:340px}
+.time-row{display:flex;gap:10px;margin:4px 0}
+.time-box{display:flex;align-items:center;gap:6px;background:rgba(9,8,7,.6);
+  border:1px solid rgba(230,192,127,.3);border-radius:14px;padding:8px 14px}
+.time-box input{width:52px;border:0;background:transparent;color:#fff1ce;text-align:center;
+  font-family:var(--serif);font-size:26px;-webkit-appearance:none;appearance:none}
+.time-box input::-webkit-outer-spin-button,.time-box input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.time-box span{font-size:13px;color:#ccb28d}
+.btn-primary{width:100%;max-width:340px;min-height:54px;border-radius:16px;
+  border:1px solid rgba(255,223,158,.62);background:linear-gradient(180deg,#dfbd80,#ad7c41);
+  color:#1c120a;font-weight:750;font-size:17px;
+  box-shadow:0 8px 26px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.35)}
+.btn-ghost{min-height:48px;border:1px solid var(--line);border-radius:14px;
+  background:rgba(28,21,15,.8);color:#e6d4b9;font-size:15px;padding:0 18px}
+.note{font-size:11.5px;line-height:1.5;color:#a58f72;max-width:320px}
+.save-tip{font-size:10px;color:#8f7b62}
+
+.room{flex:1;display:flex;flex-direction:column;min-height:0}
+.room-head{padding:4px 18px 8px;text-align:center}
+.room-head .chap{font-size:9.5px;letter-spacing:.22em;color:#d9b574;text-transform:uppercase}
+.room-head h2{font-size:clamp(20px,5.6vw,26px);color:#f1dec2;line-height:1.15;margin-top:3px}
+.doors{flex:1;display:flex;flex-direction:column;gap:10px;justify-content:center;padding:4px 14px 10px;min-height:0}
+.door{display:flex;align-items:center;gap:14px;width:100%;
+  border:1px solid rgba(236,190,118,.18);border-radius:18px;
+  background:linear-gradient(180deg,rgba(46,33,24,.9),rgba(22,16,12,.94));
+  padding:12px 14px;text-align:left;min-height:74px;transition:transform .12s ease}
+.door:active:not(:disabled){transform:scale(.985)}
+.door.blocked{opacity:.38;filter:grayscale(.85)}
+.door-arch{position:relative;flex:0 0 auto;width:52px;height:64px;
+  border:4px solid var(--trim,#836644);border-bottom-width:6px;border-radius:26px 26px 6px 6px;
+  background:repeating-linear-gradient(90deg,rgba(16,10,7,.12) 0 7px,rgba(255,228,194,.05) 8px 9px,transparent 10px 18px),
+    linear-gradient(115deg,var(--wood,#5a3b29),#170f0b);
+  box-shadow:inset 0 0 12px 4px rgba(13,9,7,.6);display:grid;place-items:center}
+.door-symbol{font-family:var(--serif);font-size:24px;color:var(--accent,#e2c399);
+  text-shadow:0 0 12px rgba(226,195,153,.5)}
+.door-body{flex:1;min-width:0}
+.door-name{font-family:var(--serif);font-size:17px;color:var(--light,#eddbc0);line-height:1.2}
+.door-sub{font-size:11.5px;color:#a68d71;margin-top:2px}
+.door-arrow{flex:0 0 auto;color:#8d7658;font-size:18px}
+
+.timer-screen{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;padding:18px;
+  background:radial-gradient(ellipse at 50% 45%,#35281b 0%,#15120f 55%,#080807 100%)}
+.ring{position:relative;width:min(72vw,300px);height:min(72vw,300px);display:grid;place-items:center}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.track{fill:none;stroke:rgba(229,188,119,.13);stroke-width:9}
+.arc{fill:none;stroke:#efc88a;stroke-width:10;stroke-linecap:round;filter:drop-shadow(0 0 8px rgba(239,177,89,.55))}
+.timer-num{position:absolute;inset:0;display:grid;place-items:center;
+  font-family:var(--serif);font-variant-numeric:tabular-nums;
+  font-size:clamp(38px,13vw,58px);color:#fff0d4;text-shadow:0 0 24px rgba(255,196,108,.2)}
+.timer-status{font-size:12.5px;color:#ac977e;text-align:center;max-width:300px}
+.timer-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:340px}
+.timer-actions .btn-ghost{flex:1;min-width:130px}
+
+.overlay{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  padding:18px;background:rgba(4,3,3,.82);backdrop-filter:blur(6px)}
+.panel{width:100%;max-width:420px;border:1px solid rgba(234,196,128,.5);border-radius:22px;
+  background:radial-gradient(ellipse at 50% 4%,rgba(153,98,48,.2),transparent 62%),linear-gradient(180deg,#302419,#17110e);
+  padding:24px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;
+  box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.panel .icon{width:74px;height:74px;display:grid;place-items:center;border-radius:50%;
+  border:1px solid rgba(255,219,154,.24);background:rgba(24,18,14,.85);font-size:40px;line-height:1}
+.panel h2{font-size:clamp(24px,7vw,32px);line-height:1.15;color:#f8e0b5}
+.panel .desc{font-size:16px;line-height:1.35;color:#f3dfc3}
+.panel .duration{font-family:var(--serif);font-size:clamp(46px,15vw,64px);color:#fff0bb;line-height:1}
+.panel .duration span{font-size:18px;letter-spacing:.04em}
+.panel .btn-primary{max-width:none;margin-top:4px}
+.panel.deadend{border-color:rgba(255,107,93,.6)}
+.panel.deadend .icon{color:#ff7466;border-color:rgba(255,114,98,.55)}
+.panel.deadend h2{color:#ff998b}
+.panel.lucky{border-color:rgba(121,218,153,.5)}
+.panel.lucky .icon{color:#8ee7a5}
+.panel.lucky h2{color:#c8f4ca}
+
+.log-list{width:100%;max-height:46vh;overflow-y:auto;text-align:left;
+  border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px;line-height:1.6;
+  color:#d6bd98;background:rgba(16,13,11,.7)}
+.log-item{border-bottom:1px solid rgba(226,179,107,.12);padding:5px 0}
+.log-item:last-child{border-bottom:0}
+.log-item .t{color:#ad8d61}
+.toast{position:absolute;z-index:200;left:50%;bottom:calc(20px + var(--safe-b));
+  transform:translateX(-50%);max-width:calc(100% - 32px);background:#3a281c;border:1px solid #bb9156;
+  border-radius:14px;padding:11px 18px;color:#f9e9ce;font-size:14px;text-align:center;
+  box-shadow:0 10px 34px rgba(0,0,0,.6)}
+.hidden{display:none!important}
+
+@media (orientation:landscape) and (max-height:520px){
+  .doors{flex-direction:row;align-items:stretch;gap:8px;padding:4px 10px 8px}
+  .door{flex:1;flex-direction:column;justify-content:center;text-align:center;gap:8px;padding:10px 8px;min-height:0}
+  .door-body{flex:0}.door-name{font-size:14px}.door-sub,.door-arrow{display:none}
+  .door-arch{width:46px;height:54px}.room-head h2{font-size:17px}.room-head .chap{font-size:8px}
+  .welcome{gap:8px;padding:10px}.welcome h1{font-size:26px}.welcome .lead{font-size:13px}
+  .btn-primary{min-height:46px;font-size:15px}
+}
+@media (min-height:780px){.door{min-height:84px}.door-name{font-size:18.5px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <svg class="bg-art" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d1916"/><stop offset=".7" stop-color="#292019"/><stop offset="1" stop-color="#0f0c0a"/></linearGradient>
+      <pattern id="books" patternUnits="userSpaceOnUse" width="90" height="90">
+        <rect width="90" height="90" fill="#150f0c"/><rect x="2" y="6" width="12" height="72" rx="2" fill="#58341f"/>
+        <rect x="16" y="9" width="9" height="69" fill="#73522f"/><rect x="27" y="3" width="15" height="75" rx="2" fill="#362e27"/>
+        <rect x="44" y="12" width="11" height="66" fill="#65422b"/><rect x="57" y="8" width="16" height="70" fill="#463123"/>
+        <rect x="75" y="5" width="13" height="73" fill="#6d4b31"/><rect y="78" width="90" height="12" fill="#58371f"/>
+      </pattern>
+      <radialGradient id="lamp"><stop offset="0" stop-color="#e09c46" stop-opacity=".3"/><stop offset="1" stop-color="#e09c46" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="400" height="800" fill="url(#wall)"/>
+    <rect x="0" y="140" width="86" height="520" fill="url(#books)" opacity=".9"/>
+    <rect x="314" y="140" width="86" height="520" fill="url(#books)" opacity=".9"/>
+    <ellipse cx="70" cy="300" rx="120" ry="200" fill="url(#lamp)"/>
+    <ellipse cx="330" cy="300" rx="120" ry="200" fill="url(#lamp)"/>
+    <path d="M120 660V330Q200 190 280 330V660" fill="#140f0d" opacity=".5" stroke="#5d412a" stroke-width="8"/>
+    <rect x="0" y="660" width="400" height="140" fill="#1a120d" opacity=".9"/>
+  </svg>
+  <div class="vignette"></div><div class="grain"></div>
+  <div class="hud hidden" id="hud">
+    <div class="chip"><div class="lbl">Учёба</div><div class="val" id="stStudy">00:00</div></div>
+    <div class="chip"><div class="lbl">Максимум</div><div class="val" id="stLimit">05:00</div></div>
+    <div class="chip"><div class="lbl">Дверей</div><div class="val" id="stDoors">0</div></div>
+    <button class="icon-btn" id="btnMenu" aria-label="Меню">☰</button>
+  </div>
+  <div class="screen" id="screen"></div>
+  <div id="overlayRoot"></div>
+  <div id="timerRoot"></div>
+  <div class="toast hidden" id="toast"></div>
+</div>
+<script>
+'use strict';
+(() => {
+  const KEY='library-mobile-v1', VERSION=1;
+  const ROOMS=['Архив забытых имён','Зал безмолвных часов','Галерея переплётчиков','Читальня лунного света','Скрипторий старых мастеров','Кабинет библиотекаря','Палата запретных атласов','Коридор медных ключей','Северная ротонда','Зеркальный каталог','Комната ночных страниц','Потайная картотека','Зал астрономических книг','Забытая оранжерея','Крипта редких изданий','Галерея затерянных историй'];
+  const SKINS=[
+    {id:'moon',name:'Лунная дверь',sym:'☾',wood:'#383a55',light:'#e0ebff',accent:'#bfd0ff',trim:'#7184ac'},
+    {id:'heart',name:'Дверь сердца',sym:'♡',wood:'#644050',light:'#ffe0dc',accent:'#ffb7ba',trim:'#ab7183'},
+    {id:'star',name:'Звёздная дверь',sym:'✶',wood:'#3c4862',light:'#d7eaff',accent:'#a9d9ff',trim:'#7c9fba'},
+    {id:'sun',name:'Солнечная дверь',sym:'☼',wood:'#71502a',light:'#ffe6af',accent:'#ffcb77',trim:'#b38a4e'},
+    {id:'ivy',name:'Дверь плюща',sym:'❦',wood:'#344d3c',light:'#d9eed0',accent:'#a8d797',trim:'#6c9b70'},
+    {id:'crystal',name:'Хрустальная дверь',sym:'◇',wood:'#354d58',light:'#defbff',accent:'#a2e2ea',trim:'#7ba9b6'},
+    {id:'crown',name:'Дверь короны',sym:'♛',wood:'#554158',light:'#f8ddff',accent:'#dfb7e7',trim:'#94719b'},
+    {id:'rose',name:'Дверь розы',sym:'✿',wood:'#62404c',light:'#ffe3e8',accent:'#edb5c0',trim:'#aa7783'},
+    {id:'comet',name:'Дверь кометы',sym:'☄',wood:'#3a4864',light:'#d9e5ff',accent:'#b6ceff',trim:'#738cb9'},
+    {id:'raven',name:'Дверь ворона',sym:'♠',wood:'#343442',light:'#e3d9f7',accent:'#b5a8d6',trim:'#6d6589'},
+    {id:'seal',name:'Дверь печати',sym:'❖',wood:'#5a4835',light:'#fce3b4',accent:'#e9ca8d',trim:'#a08656'},
+    {id:'dawn',name:'Дверь рассвета',sym:'✹',wood:'#705144',light:'#fff1c8',accent:'#ffd29a',trim:'#bc9270'},
+    {id:'emerald',name:'Изумрудная дверь',sym:'♧',wood:'#2e5147',light:'#c8f5e8',accent:'#8dd7bb',trim:'#5b9b82'},
+    {id:'mirror',name:'Зеркальная дверь',sym:'◈',wood:'#3c4c60',light:'#e1f0fd',accent:'#b6d6ef',trim:'#739ab6'},
+    {id:'magic',name:'Дверь чар',sym:'✧',wood:'#4f3f65',light:'#efdfff',accent:'#c7b3f4',trim:'#987db4'},
+    {id:'feather',name:'Дверь пера',sym:'✒',wood:'#5d4533',light:'#fff0d3',accent:'#efce97',trim:'#a98c65'},
+    {id:'ember',name:'Дверь пламени',sym:'✺',wood:'#69392c',light:'#ffe5c3',accent:'#ffa96a',trim:'#b77344'},
+    {id:'frost',name:'Дверь инея',sym:'❄',wood:'#315264',light:'#e4faff',accent:'#b5e8ff',trim:'#72aabf'},
+    {id:'eclipse',name:'Дверь затмения',sym:'◐',wood:'#494052',light:'#f0e5fa',accent:'#c1afd1',trim:'#8b769a'},
+    {id:'maze',name:'Дверь лабиринта',sym:'⌘',wood:'#5c4935',light:'#f1ddb8',accent:'#d7bb87',trim:'#94764d'},
+    {id:'mist',name:'Дверь тумана',sym:'☷',wood:'#44545a',light:'#e1f2ef',accent:'#b4d8d5',trim:'#7a9e9e'},
+    {id:'wisdom',name:'Дверь знаний',sym:'✥',wood:'#4c4360',light:'#ebdafa',accent:'#c8b6ef',trim:'#907aab'},
+    {id:'time',name:'Дверь времени',sym:'◷',wood:'#554633',light:'#fbe1b4',accent:'#edd0a0',trim:'#a38759'},
+    {id:'thorns',name:'Дверь шипов',sym:'❈',wood:'#3e4934',light:'#d8e9bc',accent:'#bbd591',trim:'#7c9a58'}
+  ];
+  const RELICS=[{id:'key',emoji:'🗝',name:'Медный ключ',boost:.08},{id:'map',emoji:'🗺',name:'Потёртая карта',boost:.08},{id:'compass',emoji:'✦',name:'Компас хранителя',boost:.08},{id:'seal',emoji:'📜',name:'Печать архивариуса',boost:.07}];
+
+  let S=null,tickTimer=null,ctx=null,toastTimer=null;
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const rnd=()=>Math.random();
+  const pick=a=>a[Math.floor(rnd()*a.length)];
+  const uid=()=>Math.floor(rnd()*1e9).toString(36);
+  const fmtHM=s=>`${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor(s%3600/60)).padStart(2,'0')}`;
+  const fmtHMS=s=>`${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor(s%3600/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+  const maxSec=()=>S.maxMin*60;
+  const leftSec=()=>Math.max(0,maxSec()-S.studiedSec);
+
+  function persist(){try{localStorage.setItem(KEY,JSON.stringify(S));return true}catch(e){return false}}
+  function restore(){
+    try{const raw=localStorage.getItem(KEY);if(!raw)return null;const s=JSON.parse(raw);
+      if(s&&s.v===VERSION&&Number.isFinite(s.maxMin)&&['choose','reveal','study','post','win'].includes(s.phase))return s;
+    }catch(e){}return null;
+  }
+  function initAudio(){try{if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume().catch(()=>{});}catch(e){}}
+  function beep(freq,delay,dur,vol,type='sine'){
+    if(!ctx)return;
+    try{const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=freq;o.connect(g);g.connect(ctx.destination);
+      const t=ctx.currentTime+delay;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.001,vol),t+.04);
+      g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.start(t);o.stop(t+dur+.05);}catch(e){}
+  }
+  function alarmSound(){initAudio();if(!ctx)return;for(let i=0;i<3;i++){const d=i*2.1;beep(784,d,.40,.20,'triangle');beep(988,d+.46,.42,.22,'triangle');beep(1175,d+.95,.70,.25,'sine');}}
+  function toast(text,ms=3200){const t=$('toast');t.textContent=text;t.className='toast';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast hidden',ms);}
+  function addLog(text){S.history.unshift({t:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}),text});S.history=S.history.slice(0,60);}
+  function openOverlay(html){const r=$('overlayRoot');r.className='overlay';r.innerHTML=html;}
+  function closeOverlay(){const r=$('overlayRoot');r.className='';r.innerHTML='';}
+
+  function newGame(min){
+    S={v:VERSION,maxMin:min,studiedSec:0,roomsVisited:0,doorsChosen:0,deadEnds:0,luckyCount:0,freeStreak:0,
+      relics:[],history:[],recentSkins:[],phase:'choose',room:null,selected:null,timer:null,created:Date.now()};
+    addLog(`Начало. Лимит: ${fmtHM(maxSec())}.`);
+    makeRoom();persist();render();
+  }
+
+  function welcome(){
+    closeOverlay();$('timerRoot').className='';$('timerRoot').innerHTML='';
+    $('hud').className='hud hidden';
+    $('screen').innerHTML=`
+      <div class="welcome">
+        <div class="eyebrow">✦ Учебный квест ✦</div>
+        <h1>Лабиринт забытой библиотеки</h1>
+        <p class="lead">Выбирай двери, проходи комнаты, находи выход. Учёба никогда не превысит твой лимит.</p>
+        <div class="eyebrow" style="font-size:10px">Максимум учёбы</div>
+        <div class="time-row">
+          <label class="time-box"><input id="inH" type="number" inputmode="numeric" min="0" max="12" value="1" aria-label="Часы"><span>ч</span></label>
+          <label class="time-box"><input id="inM" type="number" inputmode="numeric" min="0" max="59" value="0" aria-label="Минуты"><span>мин</span></label>
+        </div>
+        <p class="note">От 15 минут до 12 часов.</p>
+        <button class="btn-primary" id="btnStart">Войти в лабиринт ✦</button>
+        <p class="save-tip">Прогресс сохраняется на этом устройстве</p>
+      </div>`;
+    $('btnStart').onclick=()=>{
+      initAudio();
+      const h=parseInt($('inH').value,10)||0,m=parseInt($('inM').value,10)||0;
+      const total=h*60+m;
+      if(h<0||h>12||m<0||m>59||total<15||total>720){toast('Укажи от 15 минут до 12 часов');return;}
+      newGame(total);
+    };
+  }
+
+  function makeRoom(){
+    S.roomsVisited++;
+    const remain=leftSec();
+    let doors;
+    if(remain<900||S.roomsVisited>=26){
+      doors=[0,1,2].map(()=>({id:uid(),kind:'exit'}));
+    }else{
+      doors=[eventPick(remain,true),eventPick(remain,true),eventPick(remain,false)].map(e=>({id:uid(),...e}));
+      if(!doors.some(d=>d.kind==='study'||d.kind==='exit')){
+        doors[Math.floor(rnd()*3)]={id:uid(),kind:'study',min:pick([15,30,45,60].filter(x=>x*60<=remain))};
+      }
+    }
+    S.room={name:pick(ROOMS),doors,blocked:[]};
+    assignSkins();
+    S.phase='choose';S.selected=null;
+    addLog(`Зал ${S.roomsVisited}: ${S.room.name}.`);
+  }
+
+  function assignSkins(){
+    if(!Array.isArray(S.recentSkins))S.recentSkins=[];
+    const used=new Set();
+    for(const d of S.room.doors){
+      if(d.skin&&SKINS.some(s=>s.id===d.skin)){used.add(d.skin);continue;}
+      const pool=SKINS.filter(s=>!used.has(s.id)&&!S.recentSkins.includes(s.id));
+      const fb=SKINS.filter(s=>!used.has(s.id));
+      const ch=pick(pool.length?pool:fb);
+      d.skin=ch.id;used.add(ch.id);
+    }
+    S.recentSkins=Array.from(new Set([...S.recentSkins,...S.room.doors.map(d=>d.skin)])).slice(-9);
+  }
+  const skinFor=d=>SKINS.find(s=>s.id===d.skin)||SKINS[0];
+
+  function exitChance(){
+    const p=S.studiedSec/maxSec();
+    const minStudy=Math.min(60,Math.max(15,Math.floor(S.maxMin*.2/15)*15));
+    if(S.studiedSec<minStudy*60||S.roomsVisited<2)return 0;
+    const power=Math.pow(Math.min(1,Math.max(0,(p-.2)/.8)),1.30);
+    const rb=S.relics.reduce((x,id)=>x+(RELICS.find(r=>r.id===id)?.boost||0),0);
+    return Math.min(.62,.055+.35*power+rb+Math.max(0,S.roomsVisited-4)*.006);
+  }
+
+  function eventPick(remain,allowDead){
+    if(remain<900)return {kind:'exit'};
+    if(rnd()<exitChance())return {kind:'exit'};
+    const choices=[15,30,45,60].filter(m=>m*60<=remain);
+    if(!choices.length)return {kind:'exit'};
+    if(S.freeStreak>=2)return {kind:'study',min:pick(choices)};
+    const roll=rnd();
+    if(roll<.57)return {kind:'study',min:pick(choices)};
+    if(roll<.70)return {kind:'lucky'};
+    if(roll<.80)return {kind:'relic'};
+    if(roll<.88)return {kind:'passage'};
+    if(allowDead)return {kind:'deadend'};
+    return {kind:'study',min:pick(choices)};
+  }
+
+  function chooseDoor(idx){
+    if(!S||S.phase!=='choose'||S.room.blocked.includes(idx))return;
+    initAudio();
+    S.doorsChosen++;
+    const ev={...S.room.doors[idx]};
+    S.selected={idx,event:ev};
+    const k=ev.kind;
+    if(k==='exit'){win('Ты нашла выход за одной из дверей!');return;}
+    if(k==='deadend'){S.deadEnds++;S.room.blocked.push(idx);S.freeStreak++;addLog('Тупик. Возвращайся к дверям.');}
+    else if(k==='lucky'){S.luckyCount++;S.freeStreak++;addLog('Счастливая дверь: без учёбы.');}
+    else if(k==='relic'){
+      S.freeStreak++;
+      const unk=RELICS.filter(r=>!S.relics.includes(r.id));
+      if(unk.length){const r=pick(unk);S.relics.push(r.id);S.selected.reward=r;addLog(`Реликвия: ${r.name}.`);}
+      else{S.selected.reward={emoji:'✧',name:'Подсказка',desc:'Все реликвии собраны.'};addLog('Тайная подсказка.');}
+    }
+    else if(k==='passage'){S.freeStreak++;addLog('Потайной проход: без учёбы.');}
+    else if(k==='study'){S.freeStreak=0;addLog(`За дверью — ${ev.min} минут учёбы.`);}
+    S.phase='reveal';persist();render();
+  }
+
+  function revealData(){
+    const e=S.selected.event;
+    if(e.kind==='study')return {kind:'study',icon:'⌛',title:'Время учиться',minutes:e.min,desc:'За дверью — учебное задание.',action:'Начать учёбу'};
+    if(e.kind==='lucky')return {kind:'lucky',icon:'☘',title:'Дверь удачи!',desc:'0 минут учёбы',action:'Следующий проход →'};
+    if(e.kind==='relic'){const r=S.selected.reward;return {kind:'relic',icon:'✦',title:'Находка!',desc:`${r.name} · 0 минут`,action:'Продолжить →'};}
+    if(e.kind==='passage')return {kind:'passage',icon:'✧',title:'Тайный проход!',desc:'0 минут учёбы',action:'Войти →'};
+    return {kind:'deadend',icon:'✕',title:'Тупик!',desc:'Возвращайся к дверям',action:'Вернуться ↩'};
+  }
+
+  function advanceReveal(){
+    const e=S.selected.event;
+    if(e.kind==='study'){startTimer(e.min);return;}
+    if(e.kind==='deadend'){
+      if(S.room.blocked.length>=3){makeRoom();}
+      else S.phase='choose';
+    }else makeRoom();
+    persist();render();
+  }
+
+  function startTimer(minutes){
+    if(S.phase!=='reveal'||S.selected.event.kind!=='study')return;
+    initAudio();
+    const dur=minutes*60*1000;
+    S.timer={durationMs:dur,remainingMs:dur,endsAt:Date.now()+dur,running:true};
+    S.phase='study';persist();render();
+    if(document.documentElement.requestFullscreen){document.documentElement.requestFullscreen().catch(()=>{});}
+    tick();
+  }
+  function timerLeft(){if(!S||!S.timer)return 0;return S.timer.running?Math.max(0,S.timer.endsAt-Date.now()):Math.max(0,S.timer.remainingMs);}
+
+  function updateTimerUI(){
+    if(!S||S.phase!=='study'||!S.timer)return;
+    const left=timerLeft(),total=S.timer.durationMs;
+    const tn=$('timerNum');if(tn)tn.textContent=fmtHMS(Math.ceil(left/1000));
+    const arc=$('timerArc');
+    if(arc){const r=132,circ=2*Math.PI*r,ratio=Math.max(0,Math.min(1,left/total));
+      arc.style.strokeDasharray=String(circ);arc.style.strokeDashoffset=String(circ*(1-ratio));}
+    const pb=$('pauseBtn');if(pb)pb.textContent=S.timer.running?'⏸ Пауза':'▶ Продолжить';
+    const st=$('timerStatus');if(st)st.textContent=S.timer.running?'Идёт учёба. Сигнал прозвучит в конце.':'Пауза. Таймер остановлен.';
+  }
+
+  function tick(){
+    if(!S||S.phase!=='study'||!S.timer)return;
+    if(timerLeft()<=0){finishStudy();return;}
+    updateTimerUI();
+  }
+
+  function pauseToggle(){
+    if(!S||S.phase!=='study'||!S.timer)return;
+    const t=S.timer;
+    if(t.running){t.remainingMs=timerLeft();t.endsAt=null;t.running=false;addLog('Пауза.');}
+    else{initAudio();t.endsAt=Date.now()+t.remainingMs;t.running=true;addLog('Продолжение.');}
+    persist();updateTimerUI();
+  }
+
+  function finishStudy(){
+    if(!S||S.phase!=='study'||!S.timer)return;
+    S.studiedSec+=Math.round(S.timer.durationMs/1000);
+    const m=Math.round(S.timer.durationMs/60000);
+    addLog(`Задание выполнено: ${m} минут. Всего ${fmtHM(S.studiedSec)}.`);
+    S.timer=null;alarmSound();
+    if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+    S.phase='post';persist();render();
+  }
+
+  function win(reason){
+    if(!S)return;
+    alarmSound();
+    S.phase='win';S.selected=null;S.timer=null;
+    addLog(`Выход найден! ${reason}`);persist();render();
+  }
+
+  function render(){
+    if(S&&S.phase==='study'&&S.timer&&S.timer.running&&S.timer.endsAt<=Date.now())finishStudy();
+    closeOverlay();
+    $('timerRoot').className='';$('timerRoot').innerHTML='';
+    if(!S){welcome();return;}
+    $('hud').className='hud';
+    $('stStudy').textContent=fmtHM(S.studiedSec);
+    $('stLimit').textContent=fmtHM(maxSec());
+    $('stDoors').textContent=String(S.doorsChosen);
+
+    if(S.phase==='win'){
+      $('screen').innerHTML=`
+        <div class="welcome">
+          <div class="eyebrow">✦ Лабиринт пройден ✦</div>
+          <h1>Выход найден!</h1>
+          <p class="lead">Библиотека осталась позади.</p>
+          <div style="font-family:var(--serif);font-size:52px;color:#f4dba7">${fmtHM(S.studiedSec)}</div>
+          <p class="note">учёбы из максимальных ${fmtHM(maxSec())}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <div class="chip" style="flex:0 0 auto"><div class="lbl">Дверей</div><div class="val">${S.doorsChosen}</div></div>
+            <div class="chip" style="flex:0 0 auto"><div class="lbl">Тупиков</div><div class="val">${S.deadEnds}</div></div>
+            <div class="chip" style="flex:0 0 auto"><div class="lbl">Удач</div><div class="val">${S.luckyCount}</div></div>
+            <div class="chip" style="flex:0 0 auto"><div class="lbl">Находок</div><div class="val">${S.relics.length}</div></div>
+          </div>
+          <button class="btn-primary" id="btnReplay">Новый лабиринт ↻</button>
+        </div>`;
+      $('btnReplay').onclick=()=>{if(confirm('Начать заново?')){S=null;localStorage.removeItem(KEY);render();}};
+      return;
+    }
+
+    const doorHtml=S.room.doors.map((d,i)=>{
+      const sk=skinFor(d);
+      const blocked=S.room.blocked.includes(i);
+      return `<button class="door ${blocked?'blocked':''}" data-idx="${i}"
+        style="--wood:${sk.wood};--light:${sk.light};--accent:${sk.accent};--trim:${sk.trim}"
+        ${blocked||S.phase!=='choose'?'disabled':''}>
+        <span class="door-arch"><span class="door-symbol">${sk.sym}</span></span>
+        <span class="door-body">
+          <span class="door-name">${blocked?'ЗАКРЫТО':esc(sk.name)}</span>
+          <span class="door-sub">${['налево','прямо','направо'][i]}</span>
+        </span>
+        <span class="door-arrow">›</span>
+      </button>`;
+    }).join('');
+
+    $('screen').innerHTML=`
+      <div class="room">
+        <div class="room-head">
+          <div class="chap">Комната ${S.roomsVisited}</div>
+          <h2>${esc(S.room.name)}</h2>
+        </div>
+        <div class="doors">${doorHtml}</div>
+      </div>`;
+
+    $('screen').querySelectorAll('.door').forEach(b=>{
+      b.onclick=()=>chooseDoor(Number(b.dataset.idx));
+    });
+
+    if(S.phase==='reveal')showReveal();
+    if(S.phase==='post')showPost();
+    if(S.phase==='study')showStudy();
+  }
+
+  function showReveal(){
+    const d=revealData();
+    const dur=d.minutes!=null?`<div class="duration">${d.minutes}<span> МИНУТ</span></div>`:'';
+    openOverlay(`<div class="panel ${d.kind==='deadend'?'deadend':d.kind==='lucky'?'lucky':''}">
+      <div class="icon">${d.icon}</div>
+      <h2>${esc(d.title)}</h2>
+      ${dur}
+      <p class="desc">${d.desc}</p>
+      <button class="btn-primary" id="dlgNext">${d.action}</button>
+    </div>`);
+    $('dlgNext').onclick=advanceReveal;
+  }
+
+  function showPost(){
+    openOverlay(`<div class="panel">
+      <div class="icon">✓</div>
+      <h2>Готово!</h2>
+      <p class="desc">Всего учёбы: ${fmtHM(S.studiedSec)}</p>
+      <button class="btn-primary" id="dlgNext">К следующим дверям →</button>
+    </div>`);
+    $('dlgNext').onclick=()=>{makeRoom();persist();render();};
+  }
+
+  function showStudy(){
+    const o=$('timerRoot');o.className='timer-screen';
+    o.innerHTML=`<div class="ring">
+      <svg viewBox="0 0 300 300" aria-hidden="true">
+        <circle cx="150" cy="150" r="132" class="track"/>
+        <circle id="timerArc" cx="150" cy="150" r="132" class="arc"/>
+      </svg>
+      <div class="timer-num" id="timerNum">00:00:00</div>
+    </div>
+    <div class="timer-actions">
+      <button class="btn-ghost" id="pauseBtn">⏸ Пауза</button>
+      <button class="btn-ghost" id="fsBtn">⛶ Экран</button>
+      <button class="btn-ghost" id="restartBtn">↻ Заново</button>
+    </div>
+    <p class="timer-status" id="timerStatus">Идёт учёба. Сигнал прозвучит в конце.</p>`;
+    $('pauseBtn').onclick=pauseToggle;
+    $('fsBtn').onclick=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>toast('Полный экран недоступен'));else document.exitFullscreen?.();};
+    $('restartBtn').onclick=()=>{if(confirm('Начать заново? Прогресс сбросится.')){S=null;localStorage.removeItem(KEY);render();}};
+    updateTimerUI();
+  }
+
+  function showHistory(){
+    if(!S){toast('Сначала начни игру');return;}
+    const items=S.history.slice(0,20).map(h=>`<div class="log-item"><span class="t">${esc(h.t)}</span> · ${esc(h.text)}</div>`).join('');
+    openOverlay(`<div class="panel">
+      <div class="icon">☷</div>
+      <h2>Журнал</h2>
+      <div class="log-list">${items||'<div class="log-item">Пока пусто</div>'}</div>
+      <button class="btn-primary" id="closeLog">Вернуться</button>
+      <button class="btn-ghost" id="restartLog" style="width:100%">Новая игра</button>
+    </div>`);
+    $('closeLog').onclick=closeOverlay;
+    $('restartLog').onclick=()=>{if(confirm('Начать заново?')){S=null;localStorage.removeItem(KEY);render();}};
+  }
+
+  $('btnMenu').onclick=showHistory;
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S&&S.phase==='study')tick();});
+  window.addEventListener('focus',()=>{if(S&&S.phase==='study')tick();});
+  document.addEventListener('keydown',e=>{if(e.code==='Space'&&S&&S.phase==='study'){e.preventDefault();pauseToggle();}});
+
+  const stored=restore();
+  if(stored){S=stored;render();toast('Игра восстановлена. Продолжаем!');}
+  else welcome();
+  tickTimer=setInterval(tick,250);
+})();
+</script>
+</body>
+</html>
